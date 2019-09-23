@@ -13,12 +13,12 @@ neigh_modify	every 1 delay 10 check yes
 
 #Variable definition
 
-variable 	MyInitial equal 0.2e6
+variable 	MyInitial equal 0.5e6
 variable 	MyBarostat equal 0.5e6
 variable 	MyFinal equal 10^5
 variable 	MyTrajectory equal 10^4
-variable 	Lx equal 17
-variable	Height equal 40
+variable 	Lx equal 10
+variable	Height equal 20
 variable 	a equal 1 #Lattice Constant
 variable 	Xsolute equal 0.2
 variable 	MyThermo equal 1000
@@ -62,7 +62,7 @@ velocity     	gwall set 0.0 0.0 0.0
 fix	     	staticwall gwall setforce 0.0 0.0 0.0
 # Run Parameters
 
-timestep	0.005
+timestep	0.002
 minimize 	0.0 1.0e-8 1000 100000          #Relax the initial configuration and velocities
 reset_timestep 	0
 
@@ -108,29 +108,38 @@ fix 		average_ly all ave/time 1 1000 1000 v_Ly ave running overwrite
 
 run		${MyBarostat}
 
-variable        ymin equal -ylo  
-displace_atoms  all move 0 v_ymin 0 units box 
-run 0
 
+timestep 0.0001
+
+#variable        ymin equal -ylo  
+#displace_atoms  all move 0 v_ymin 0 units box 
+velocity     	all set 0.0 0.0 0.0
+fix             staticwall gwall setforce 0.0 0.0 0.0
+
+minimize        0.0 1.0e-8 1000 100000          #Relax the initial configuration and velocities
+
+change_box      all boundary p f p remap
+#run 0
+
+variable  	y_wall equal xcm(gwall,y)
+print           "The average value of ly is ${y_wall}"
 ##########################################################
 #Finalising
 ##########################################################
 
 #Setting the simulation to the average lz
-change_box      all boundary p f p
 variable 	ly_ave equal f_average_ly
 print 		"The average value of ly is ${ly_ave}"
 
+#change_box 	all y final 0 ${ly_ave} units box 
 
-change_box 	all y final 0 ${ly_ave} units box 
-
-include 	in.geom
-include 	in.computations
+#include 	in.geom
+#include 	in.computations
 
 unfix 		wallforces1
 unfix 		wallforces2
 
-fix             staticwall gwall setforce 0.0 0.0 0.0
+
 
 #Writing the final configuration
 #write_data 	final_conf.dat nocoeff
