@@ -13,12 +13,12 @@ neigh_modify	every 1 delay 10 check yes
 
 #Variable definition
 
-variable 	MyInitial equal 4e5
-variable 	MyBarostat equal 2.0e5
+variable 	MyInitial equal 0.2e6
+variable 	MyBarostat equal 0.5e6
 variable 	MyFinal equal 10^5
 variable 	MyTrajectory equal 10^4
 variable 	Lx equal 17
-variable	Height equal 36
+variable	Height equal 40
 variable 	a equal 1 #Lattice Constant
 variable 	Xsolute equal 0.2
 variable 	MyThermo equal 1000
@@ -41,10 +41,12 @@ group 		gwall region rwall
 
 #Fluid atoms
 lattice 	sq 0.75 
-region 		rfluid block INF INF 1 ${Height} INF INF
+region 		rfluid block INF INF 1 ${Height} INF INF units box
 create_atoms	1 region rfluid
 group 		gfluid subtract all gwall
 
+
+lattice 	sq 1.0
 
 #Creating the solute particles
 set          	group gfluid type/fraction 2 ${Xsolute} 2436 #Solute creation randomly replacing 
@@ -55,7 +57,7 @@ include 	../in.interaction
 fix 		2dconstraint all enforce2d
 
 #Defining the wall
-fix	   	SlipWall gfluid wall/reflect yhi EDGE #SlipWall
+fix	   	SlipWall gfluid wall/reflect yhi ${Height} units box #SlipWall
 velocity     	gwall set 0.0 0.0 0.0
 fix	     	staticwall gwall setforce 0.0 0.0 0.0
 # Run Parameters
@@ -68,13 +70,18 @@ reset_timestep 	0
 #velocity 	gfluid create 1.0 123234 dist gaussian
 
 #Set 
-fix 		Ensemble gfluid nvt temp 1.0 1.0 1.0
+#fix 		Ensemble gfluid nvt temp 1.0 1.0 1.0
+
+compute      mobile gfluid temp
+fix          1 all nve
+fix          2 gfluid temp/rescale 200 1.0 1.0 0.02 1.0
+fix_modify   2 temp mobile
 
 #Compute and outputs
 thermo		${MyThermo} 
-thermo_style 	custom step temp  press pyy vol ly ylo yhi
+thermo_style 	custom step temp press atoms ylo yhi ly
 thermo_modify 	flush yes
-
+#thermo_modify 	lost warn
 dump 		dump_all all custom ${MyTrajectory} all.atom id type x y z ix iy iz
 
 run 		${MyInitial}
@@ -86,16 +93,25 @@ run 		${MyInitial}
 variable 	Ly equal ly
 variable 	Lx equal lx
 variable 	Lz equal lz
+
 change_box      all boundary p s p
 variable        NatomsWall equal count(gwall)
-variable        WallForce equal 100/${NatomsWall}
+variable        WallForce equal ${P0}*lx*lz/${NatomsWall}
 unfix 		staticwall
+
 fix             wallforces1 gwall setforce 0.0 NULL 0.0
 fix             wallforces2 gwall aveforce 0.0 ${WallForce} 0.0
+
+run             ${MyBarostat}
 
 fix 		average_ly all ave/time 1 1000 1000 v_Ly ave running overwrite
 
 run		${MyBarostat}
+
+variable        ymin equal -ylo  
+displace_atoms  all move 0 v_ymin 0 units box 
+run 0
+
 ##########################################################
 #Finalising
 ##########################################################
@@ -105,7 +121,8 @@ change_box      all boundary p f p
 variable 	ly_ave equal f_average_ly
 print 		"The average value of ly is ${ly_ave}"
 
-change_box 	all y final 0 ${ly_ave} remap units box 
+
+change_box 	all y final 0 ${ly_ave} units box 
 
 include 	in.geom
 include 	in.computations
@@ -114,10 +131,6 @@ unfix 		wallforces1
 unfix 		wallforces2
 
 fix             staticwall gwall setforce 0.0 0.0 0.0
-
-compute         ccBulk  gSolu chunk/atom bin/1d y lower 0.1 bound y 10 20 units box
-fix             propSolu  gSolu ave/chunk ${myNevery} ${myNrepeat} ${myFreq}  ccBulk c_Stress[1] c_Stress[2] c_Stress[3] file bulk_properties.dat ave running overwrite
-
 
 #Writing the final configuration
 #write_data 	final_conf.dat nocoeff

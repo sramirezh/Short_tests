@@ -51,3 +51,17 @@ fix             propSolv2  gSolv ave/chunk ${myNevery} ${myNrepeat} ${myFreq}  c
 compute         ccSolu2 gSolu chunk/atom bin/1d y lower 0.1 units box
 fix             propSolu2  gSolu ave/chunk ${myNevery} ${myNrepeat} ${myFreq}  ccSolu2 vx density/mass c_Stress[3] c_Stress[1] fx file Sproperties_short.dat ave running overwrite
 
+
+###########################################################
+# Getting the pressure distribution
+###########################################################
+compute         ccBulk gFluid chunk/atom bin/1d y lower 0.1 bound y 10 20 units box
+
+fix             propBulk gFluid ave/chunk ${myNevery} ${myNrepeat} ${myFreq}  ccBulk c_Stress[1] c_Stress[2] c_Stress[3] density/number file properties_short.dat ave running overwrite
+
+variable p_chunk vector -(f_propBulk[3]+f_propBulk[4])*f_propBulk[6]/2.0
+variable chunk_positions vector f_propBulk[1] 
+fix test all ave/time ${myFreq} 1 ${myFreq} v_chunk_positions v_p_chunk file press_dist.dat mode vector ave running overwrite
+
+
+
