@@ -1,0 +1,10 @@
+compute         Stress all stress/atom NULL
+compute         ccFluid1 all chunk/atom bin/1d z lower 0.1 bound z 6 18 units box
+fix             propBulk all ave/chunk ${Nevery} ${Nrepeat} ${Nfreq}  ccFluid1 c_Stress[1] c_Stress[2] c_Stress[3] density/number file properties_short.dat ave running overwrite
+
+# The pressure in the chunk
+variable p_chunk vector -(f_propBulk[3]+f_propBulk[4]+f_propBulk[5])*f_propBulk[6]/3.0
+# Vector with the positions of the center of the chunks (Somehow it changes with time but shall converge to the real value, if not take the positions from the ave/chunk)
+
+variable chunk_positions vector f_propBulk[1]
+fix test all ave/time ${Nfreq} 1 ${Nfreq} v_chunk_positions v_p_chunk file press_dist.dat mode vector ave running overwrite
