@@ -109,16 +109,23 @@ fix 		average_ly all ave/time 1 1000 1000 v_Ly ave running overwrite
 run		${MyBarostat}
 
 
-timestep 0.0001
 
-#variable        ymin equal -ylo  
-#displace_atoms  all move 0 v_ymin 0 units box 
+unfix		wallforces1
+unfix 		wallforces2 
 velocity     	all set 0.0 0.0 0.0
+fix		enforce all setforce 0.0 0.0 0.0 
+unfix 		enforce
 fix             staticwall gwall setforce 0.0 0.0 0.0
 
-minimize        0.0 1.0e-8 1000 100000          #Relax the initial configuration and velocities
+# Translating atoms and moving the box
 
-change_box      all boundary p f p remap
+#variable        ymin equal -ylo  
+#displace_atoms  all move 0 v_ymin 0 units box
+#change_box 	all y final 0 ${Ly} remap units box 
+
+minimize        1.0e-4 1.0e-6 10000 100000          #Relax the initial configuration and velocities
+
+change_box      all boundary p f p 
 #run 0
 
 variable  	y_wall equal xcm(gwall,y)
@@ -131,13 +138,9 @@ print           "The average value of ly is ${y_wall}"
 variable 	ly_ave equal f_average_ly
 print 		"The average value of ly is ${ly_ave}"
 
-#change_box 	all y final 0 ${ly_ave} units box 
 
 #include 	in.geom
 #include 	in.computations
-
-unfix 		wallforces1
-unfix 		wallforces2
 
 
 
