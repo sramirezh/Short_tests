@@ -153,6 +153,8 @@ variable       scale equal ${ly_ave}/ly
 fix            deform all deform 50 y scale ${scale} remap x
 #Writing the final configuration
 #write_data 	final_conf.dat nocoeff
+
+write_restart   equil.conf
 run 		${MyFinal}
 
 
