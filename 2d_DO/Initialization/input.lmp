@@ -57,12 +57,13 @@ include 	../in.interaction
 fix 		2dconstraint all enforce2d
 
 #Defining the wall
-fix	   	SlipWall gfluid wall/reflect yhi ${Height} units box #SlipWall
+
+fix	   	SlipWall gfluid wall/reflect yhi EDGE #SlipWall
 velocity     	gwall set 0.0 0.0 0.0
 fix	     	staticwall gwall setforce 0.0 0.0 0.0
 # Run Parameters
 
-timestep	0.002
+timestep	0.005
 minimize 	0.0 1.0e-8 1000 100000          #Relax the initial configuration and velocities
 reset_timestep 	0
 
@@ -79,7 +80,7 @@ fix_modify   2 temp mobile
 
 #Compute and outputs
 thermo		${MyThermo} 
-thermo_style 	custom step temp press atoms ylo yhi ly
+thermo_style 	custom step temp press atoms ylo yhi ly pe ke
 thermo_modify 	flush yes
 #thermo_modify 	lost warn
 dump 		dump_all all custom ${MyTrajectory} all.atom id type x y z ix iy iz
@@ -123,9 +124,9 @@ fix             staticwall gwall setforce 0.0 0.0 0.0
 #displace_atoms  all move 0 v_ymin 0 units box
 #change_box 	all y final 0 ${Ly} remap units box 
 
-minimize        1.0e-4 1.0e-6 10000 100000          #Relax the initial configuration and velocities
 
-change_box      all boundary p f p 
+
+#change_box      all boundary p f p 
 #run 0
 
 variable  	y_wall equal xcm(gwall,y)
@@ -142,8 +143,20 @@ print 		"The average value of ly is ${ly_ave}"
 #include 	in.geom
 #include 	in.computations
 
+change_box      all boundary p f p remap 
 
 
+fix	   	SlipWall2 all wall/reflect yhi EDGE #SlipWall
+minimize        1.0e-5 1.0e-6 10000 100000          #Relax the initial configuration and velocities
+
+
+variable       scale equal ${ly_ave}/ly
+fix            deform all deform 100 y scale ${scale} remap x
+timestep	0.002
+thermo 		10
 #Writing the final configuration
 #write_data 	final_conf.dat nocoeff
 run 		${MyFinal}
+
+
+#run 		100000
