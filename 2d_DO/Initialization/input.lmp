@@ -144,16 +144,13 @@ print 		"The average value of ly is ${ly_ave}"
 #include 	in.computations
 
 change_box      all boundary p f p remap 
-
-
-fix	   	SlipWall2 all wall/reflect yhi EDGE #SlipWall
+unfix		SlipWall 
+fix	   	SlipWall all wall/reflect yhi EDGE #SlipWall
 minimize        1.0e-5 1.0e-6 10000 100000          #Relax the initial configuration and velocities
 
 
 variable       scale equal ${ly_ave}/ly
-fix            deform all deform 100 y scale ${scale} remap x
-timestep	0.002
-thermo 		10
+fix            deform all deform 50 y scale ${scale} remap x
 #Writing the final configuration
 #write_data 	final_conf.dat nocoeff
 run 		${MyFinal}
