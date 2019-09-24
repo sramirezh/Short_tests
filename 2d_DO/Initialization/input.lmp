@@ -1,4 +1,4 @@
-#3D Binary LJ flow simulation
+#2D Binary LJ simulation in contact with a wall
 # Type 1 is the solvent
 # Type 2 is the solute
 # Type 3 is the wall
@@ -45,7 +45,7 @@ region 		rfluid block INF INF 1 ${Height} INF INF units box
 create_atoms	1 region rfluid
 group 		gfluid subtract all gwall
 
-
+# Making the units of the box equal to the lattice
 lattice 	sq 1.0
 
 #Creating the solute particles
@@ -56,33 +56,38 @@ include 	../in.interaction
 
 fix 		2dconstraint all enforce2d
 
+
+##########################################################
 #Defining the wall
+##########################################################
 
 fix	   	SlipWall gfluid wall/reflect yhi EDGE #SlipWall
 velocity     	gwall set 0.0 0.0 0.0
 fix	     	staticwall gwall setforce 0.0 0.0 0.0
+
+
 # Run Parameters
 
 timestep	0.005
 minimize 	0.0 1.0e-8 1000 100000          #Relax the initial configuration and velocities
 reset_timestep 	0
 
-#Set velocity of particles 
-#velocity 	gfluid create 1.0 123234 dist gaussian
 
-#Set 
-#fix 		Ensemble gfluid nvt temp 1.0 1.0 1.0
+
+##########################################################
+# NVE ENSEMBLE
+##########################################################
 
 compute      mobile gfluid temp
-fix          1 all nve
-fix          2 gfluid temp/rescale 200 1.0 1.0 0.02 1.0
-fix_modify   2 temp mobile
+fix          Ensemble all nve
+fix          Thermostat gfluid temp/rescale 200 1.0 1.0 0.02 1.0
+fix_modify   Thermostat temp mobile 
 
 #Compute and outputs
+
 thermo		${MyThermo} 
-thermo_style 	custom step temp press atoms ylo yhi ly pe ke
+thermo_style 	custom step temp c_mobile press atoms ylo yhi ly pe ke
 thermo_modify 	flush yes
-#thermo_modify 	lost warn
 dump 		dump_all all custom ${MyTrajectory} all.atom id type x y z ix iy iz
 
 run 		${MyInitial}
@@ -110,6 +115,9 @@ fix 		average_ly all ave/time 1 1000 1000 v_Ly ave running overwrite
 run		${MyBarostat}
 
 
+##########################################################
+# Stopping all the movements 
+##########################################################
 
 unfix		wallforces1
 unfix 		wallforces2 
@@ -118,44 +126,29 @@ fix		enforce all setforce 0.0 0.0 0.0
 unfix 		enforce
 fix             staticwall gwall setforce 0.0 0.0 0.0
 
-# Translating atoms and moving the box
-
-#variable        ymin equal -ylo  
-#displace_atoms  all move 0 v_ymin 0 units box
-#change_box 	all y final 0 ${Ly} remap units box 
 
 
-
-#change_box      all boundary p f p 
-#run 0
-
-variable  	y_wall equal xcm(gwall,y)
-print           "The average value of ly is ${y_wall}"
 ##########################################################
-#Finalising
+# Setting the simulation to the average lz
 ##########################################################
 
-#Setting the simulation to the average lz
 variable 	ly_ave equal f_average_ly
 print 		"The average value of ly is ${ly_ave}"
-
-
-#include 	in.geom
-#include 	in.computations
 
 change_box      all boundary p f p remap 
 unfix		SlipWall 
 fix	   	SlipWall all wall/reflect yhi EDGE #SlipWall
 minimize        1.0e-5 1.0e-6 10000 100000          #Relax the initial configuration and velocities
 
+# Moving the box limits to the desired 
 
 variable       scale equal ${ly_ave}/ly
 fix            deform all deform 50 y scale ${scale} remap x
-#Writing the final configuration
-#write_data 	final_conf.dat nocoeff
 
 write_restart   equil.conf
 run 		${MyFinal}
 
 
-#run 		100000
+#Writing the final configuration
+write_data 	final_conf.dat nocoeff
+
