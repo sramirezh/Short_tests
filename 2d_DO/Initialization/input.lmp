@@ -126,11 +126,18 @@ fix		enforce all setforce 0.0 0.0 0.0
 unfix 		enforce
 fix             staticwall gwall setforce 0.0 0.0 0.0
 
+variable        ymin equal -ylo  
+
+print 		"The y min is ${ymin}"
+
+displace_atoms  all move 0 v_ymin 0 units box
+fix	   	SlipWall2 all wall/reflect yhi EDGE #SlipWall
 
 
 ##########################################################
 # Setting the simulation to the average lz
 ##########################################################
+
 
 variable 	ly_ave equal f_average_ly
 print 		"The average value of ly is ${ly_ave}"
@@ -147,6 +154,8 @@ fix            deform all deform 50 y scale ${scale} remap x
 
 write_restart   equil.conf
 run 		${MyFinal}
+
+
 
 
 #Writing the final configuration
