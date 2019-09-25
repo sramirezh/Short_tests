@@ -138,7 +138,6 @@ fix	   	SlipWall2 all wall/reflect yhi EDGE #SlipWall
 # Setting the simulation to the average lz
 ##########################################################
 
-
 variable 	ly_ave equal f_average_ly
 print 		"The average value of ly is ${ly_ave}"
 
@@ -150,12 +149,15 @@ minimize        1.0e-5 1.0e-6 10000 100000          #Relax the initial configura
 # Moving the box limits to the desired 
 
 variable       scale equal ${ly_ave}/ly
-fix            deform all deform 50 y scale ${scale} remap x
+fix            deform all deform 10 y final 0 ${ly_ave} remap x
 
-write_restart   equil.conf
 run 		${MyFinal}
 
+write_restart   equil.conf
+run		0 
+#fix 		recenter gwall recenter NULL -0.5 NULL shift all units box
 
+#run 10000
 
 
 #Writing the final configuration
