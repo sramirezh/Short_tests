@@ -102,8 +102,7 @@ variable        NatomsWall equal count(gwall)
 variable        WallForce equal ${P0}*lx*ly/${NatomsWall}
 unfix 		staticwall
 
-fix             wallforces1 gwall setforce 0.0 0.0 NULL
-fix             wallforces2 gwall aveforce 0.0 0.0 ${WallForce}
+fix             wallforces2 gwall setforce 0.0 0.0 ${WallForce}
 
 run             ${MyBarostat}
 
@@ -133,10 +132,11 @@ variable        zmin equal -zlo
 variable 	lz_ave equal f_average_lz
 print 		"The average value of lz is ${lz_ave}"
 
+thermo 		2
 change_box      all boundary p p f remap 
 unfix		SlipWall 
 fix	   	SlipWall all wall/reflect zhi EDGE #SlipWall
-minimize        1.0e-5 1.0e-6 10000 100000          #Relax the initial configuration and velocities
+minimize        1.0e-7 1.0e-6 10000 100000          #Relax the initial configuration and velocities
 
 # Moving the box limits to the desired 
 

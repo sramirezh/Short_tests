@@ -1,0 +1,116 @@
+#3D Binary LJ flow simulation
+# Type 1 is the solvent
+# Type 2 is the solute
+# Type 3 is the wall
+
+boundary	p p f #f is fixed wall, to set the slipwall condition, it cant be periodic. 
+
+units		lj
+atom_style	atomic
+neighbor	0.5 bin
+neigh_modify	every 1 delay 10 check yes
+
+#Variable definition
+
+variable 	MyInitial equal 10^7
+variable 	MyBarostat equal 2.0e5
+variable 	MyFinal equal 10^5
+variable 	MyTrajectory equal 10^3
+variable 	Lx equal 10
+variable	Height equal 15
+variable 	a equal 1 #Lattice Constant
+variable 	Xsolute equal 0.2
+variable 	MyThermo equal 1000
+variable 	P0 equal 1e0
+
+##########################################################
+#Intialisation
+##########################################################
+
+#Creating the geometry
+region 		box block 0 ${Lx} 0 ${Lx} 0 ${Height} 
+create_box	3 box
+
+#Wall atoms
+
+lattice 	sc ${a}
+region 		rwall block INF INF INF INF 0 0 units box
+create_atoms 	3 region rwall
+group 		gwall region rwall
+
+#Fluid atoms
+lattice 	sc 0.75 
+region 		rfluid block INF INF INF INF 1 ${Height}
+create_atoms	1 region rfluid
+group 		gfluid subtract all gwall
+
+
+#Creating the solute particles
+set          	group gfluid type/fraction 2 ${Xsolute} 24367 #Solute creation randomly replacing 
+
+#Including the interactions 
+include 	../in.interaction
+
+#Defining the wall
+fix	   	SlipWall gfluid wall/reflect zhi EDGE #SlipWall
+velocity     	gwall set 0.0 0.0 0.0
+fix	     	staticwall gwall setforce 0.0 0.0 0.0
+# Run Parameters
+
+timestep	0.005
+minimize 	0.0 1.0e-8 1000 100000          #Relax the initial configuration and velocities
+reset_timestep 	0
+
+#Set velocity of particles 
+velocity 	gfluid create 1.0 123234 dist gaussian
+
+#Set 
+fix 		Ensemble gfluid nvt temp 1.0 1.0 1.0
+
+
+#Compute and outputs
+thermo		${MyThermo} 
+thermo_style 	custom step temp press pzz vol lz
+thermo_modify 	flush yes
+
+dump 		dump_all all custom ${MyTrajectory} all.atom id type x y z ix iy iz
+
+run 		${MyInitial}
+
+
+##########################################################
+#Barostating
+##########################################################
+variable 	Lz equal lz
+
+change_box      all boundary p p s
+variable        NatomsWall equal count(gwall)
+variable        WallForce equal ${P0}*ly*lx/${NatomsWall}
+unfix 		staticwall
+fix             wallforces gwall setforce 0.0 0.0 ${WallForce}
+
+
+fix 		average_lz all ave/time 1 1000 1000 v_Lz ave running overwrite
+
+run		${MyBarostat}
+##########################################################
+#Finalising
+##########################################################
+
+#Setting the simulation to the average lz
+change_box      all boundary p p f
+variable 	lz_ave equal f_average_lz
+print 		"The average value of lz is ${lz_ave}"
+
+change_box 	all z final 0 ${lz_ave} units box
+
+include 	in.geom
+include 	in.computations
+
+unfix 		wallforces
+
+fix             staticwall gwall setforce 0.0 0.0 0.0
+
+#Writing the final configuration
+write_data 	final_conf.dat nocoeff
+run 		${MyFinal}
