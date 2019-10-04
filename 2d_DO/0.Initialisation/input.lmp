@@ -13,9 +13,9 @@ neigh_modify	every 1 delay 10 check yes
 
 #Variable definition
 
-variable 	MyInitial equal 0.5e6
-variable 	MyBarostat equal 0.5e6
-variable 	MyFinal equal 10^5
+variable 	MyInitial equal 1e5
+variable 	MyBarostat equal 0.3e6
+variable 	MyFinal equal 1e3
 variable 	MyTrajectory equal 10^4
 variable 	Lx equal 10
 variable	Height equal 20
@@ -79,9 +79,7 @@ reset_timestep 	0
 ##########################################################
 
 compute      mobile gfluid temp
-fix          Ensemble all nve
-fix          Thermostat gfluid temp/rescale 200 1.0 1.0 0.02 1.0
-fix_modify   Thermostat temp mobile 
+fix          Ensemble all nvt temp 1.0 1.0 1.0
 
 #Compute and outputs
 
@@ -149,7 +147,7 @@ minimize        1.0e-5 1.0e-6 10000 100000          #Relax the initial configura
 # Moving the box limits to the desired 
 
 variable       scale equal ${ly_ave}/ly
-fix            deform all deform 10 y final 0 ${ly_ave} remap x
+fix            deform all deform 10 y final 0 ${ly_ave} remap x units box
 
 run 		${MyFinal}
 
